@@ -10,7 +10,6 @@ apt-get install -y \
   vim \
   build-essential \
   openssl \
-  sftp \
   expect
   
 
