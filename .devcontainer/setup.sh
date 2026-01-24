@@ -9,7 +9,10 @@ apt-get install -y \
   zsh \
   vim \
   build-essential \
-  openssl
+  openssl \
+  sftp \
+  expect
+  
 
 ## Install rustup and common components
 curl https://sh.rustup.rs -sSf | sh -s -- -y 
@@ -22,7 +25,24 @@ rustup component add clippy --toolchain nightly
 cargo install cargo-expand
 cargo install cargo-edit
 
-## setup and install oh-my-zsh
+cargo install cargo-watch
+cargo install espflash
+
+## Specific for ESP32 devs. Taken from ssh-stamp
+rustup toolchain install stable --component rust-src
+rustup target add riscv32imac-unknown-none-elf # esp32c6
+rustup target add riscv32imc-unknown-none-elf # esp32-c2/c3
+### Special for ESP32/-s2/s3 (Xtensa Cores)
+cargo install espup
+espup install
+$HOME/export-esp.sh
+rustup override set esp
+cargo build-esp32
+cargo build-esp32s2
+cargo build-esp32s3
+
+
+## setup and install oh-my-zsh: Why not, lets leave this here
 sh -c "$(curl -fsSL https://raw.githubusercontent.com/robbyrussell/oh-my-zsh/master/tools/install.sh)"
 cp -R /root/.oh-my-zsh /home/$USERNAME
 cp /root/.zshrc /home/$USERNAME
