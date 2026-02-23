@@ -1,66 +1,30 @@
 #!/usr/bin/env bash
+# postCreateCommand: runs once after the Codespace container is created.
+# All heavy tooling is pre-installed in the image; this script is intentionally
+# lightweight so Codespace creation completes quickly.
 set -euo pipefail
 
 log() { echo "==> $*"; }
-ensure_in_profile() { local line=$1 file=$2; grep -qxF "$line" "$file" 2>/dev/null || echo "$line" >> "$file"; }
 
-## Install rustup
-log "Installing rustup..."
-if [ ! -f "$HOME/.cargo/bin/rustup" ]; then
-    curl https://sh.rustup.rs -sSf | sh -s -- -y --no-modify-path
+# Ensure cargo env is on PATH for this script
+if [ -f "$HOME/.cargo/env" ]; then
+    . "$HOME/.cargo/env"
 fi
 
-# Source cargo environment for the rest of this script
-. "$HOME/.cargo/env"
+log "Rust toolchain:"
+rustup show active-toolchain 2>/dev/null || rustup show
 
-## Install Rust toolchains and components
-log "Installing Rust toolchains and components..."
-rustup install nightly
-rustup component add rustfmt clippy
-rustup component add rustfmt clippy --toolchain nightly
-rustup toolchain install stable --component rust-src
+log "Installed cargo tools:"
+for tool in rustfmt clippy cargo-watch cargo-expand flip-link espflash espup; do
+    printf "  %-16s %s\n" "$tool" "$(command -v "$tool" >/dev/null 2>&1 && echo 'ok' || echo 'NOT FOUND')"
+done
 
-## Install cargo tools
-log "Installing cargo tools..."
-cargo install cargo-expand
-cargo install cargo-edit
-cargo install cargo-watch
-cargo install espflash
-
-## ESP32 RISC-V targets
-log "Adding ESP32 RISC-V targets..."
-rustup target add riscv32imac-unknown-none-elf  # esp32c6
-rustup target add riscv32imc-unknown-none-elf   # esp32-c2/c3
-
-## Install espup and Xtensa toolchain (ESP32/S2/S3)
-log "Installing espup..."
-cargo install espup
-log "Running espup install (this may take a while)..."
-espup install
-
-## Configure ESP environment
+log "ESP32 environment:"
 if [ -f "$HOME/export-esp.sh" ]; then
-    log "Adding export-esp.sh to shell profiles..."
-    ensure_in_profile '. "$HOME/export-esp.sh"' "$HOME/.bashrc"
-    ensure_in_profile '. "$HOME/export-esp.sh"' "$HOME/.zshrc"
-    rustup override set esp || log "WARNING: failed to set esp toolchain override"
+    echo "  export-esp.sh: ok"
 else
-    log "WARNING: $HOME/export-esp.sh not found after espup install; ESP32 (Xtensa) environment may be incomplete"
+    echo "  WARNING: ~/export-esp.sh not found (espup may not have completed)"
 fi
 
-## Install oh-my-zsh non-interactively
-log "Installing oh-my-zsh..."
-if [ ! -d "$HOME/.oh-my-zsh" ]; then
-    git clone --depth=1 https://github.com/ohmyzsh/ohmyzsh.git "$HOME/.oh-my-zsh"
-    cp "$HOME/.oh-my-zsh/templates/zshrc.zsh-template" "$HOME/.zshrc"
-fi
-
-## Ensure cargo/rust env is sourced in zsh profile
-ensure_in_profile '. "$HOME/.cargo/env"' "$HOME/.zshrc"
-
-## Set default shell to zsh
-log "Setting default shell to zsh..."
-sudo chsh -s /usr/bin/zsh "$(whoami)" || log "WARNING: could not set default shell to zsh"
-
-log "Setup complete!"
+log "Setup verification complete — happy embedded hacking!"
 

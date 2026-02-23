@@ -3,6 +3,7 @@
 	"build": {
 		"dockerfile": "Dockerfile"
 	},
+	"remoteUser": "vscode",
 	"postCreateCommand": "bash .devcontainer/setup.sh",
 	"customizations": {
 		"vscode": {
@@ -10,8 +11,9 @@
 				"cschleiden.vscode-github-actions",
 				"GitHub.copilot-chat",
 				"ms-vsliveshare.vsliveshare",
-				"matklad.rust-analyzer",
+				"rust-lang.rust-analyzer",
 				"vadimcn.vscode-lldb",
+				"probe-rs.probe-rs-debugger",
 				"tamasfe.even-better-toml",
 				"fill-labs.dependi",
 				"ms-vscode.hexeditor",
