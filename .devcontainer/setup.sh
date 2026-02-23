@@ -1,49 +1,75 @@
-## update and install some things we should probably have
-apt-get update
-apt-get install -y \
-  curl \
-  git \
-  gnupg2 \
-  jq \
-  sudo \
-  zsh \
-  vim \
-  build-essential \
-  openssl \
-  expect
-  
+#!/usr/bin/env bash
+# postCreateCommand: runs once after the Codespace container is created.
+# Uses pre-built binaries (cargo-binstall) to avoid source compilation and OOM.
+set -euo pipefail
 
-## Install rustup and common components
-curl https://sh.rustup.rs -sSf | sh -s -- -y 
+log() { echo "==> $*"; }
+ensure_in_profile() {
+    local line=$1 file=$2
+    grep -qxF "$line" "$file" 2>/dev/null || echo "$line" >> "$file"
+}
+
+## ── Rustup ────────────────────────────────────────────────────────────────────
+log "Installing rustup..."
+if [ ! -f "$HOME/.cargo/bin/rustup" ]; then
+    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --no-modify-path
+fi
+. "$HOME/.cargo/env"
+
+## ── Rust toolchains, components, and embedded targets ────────────────────────
+log "Configuring Rust toolchains..."
 rustup install nightly
-rustup component add rustfmt
-rustup component add rustfmt --toolchain nightly
-rustup component add clippy 
-rustup component add clippy --toolchain nightly
-
-cargo install cargo-expand
-cargo install cargo-edit
-
-cargo install cargo-watch
-cargo install espflash
-
-## Specific for ESP32 devs. Taken from ssh-stamp
+rustup component add rustfmt clippy
+rustup component add rustfmt clippy --toolchain nightly
 rustup toolchain install stable --component rust-src
-rustup target add riscv32imac-unknown-none-elf # esp32c6
-rustup target add riscv32imc-unknown-none-elf # esp32-c2/c3
-### Special for ESP32/-s2/s3 (Xtensa Cores)
-cargo install espup
+
+log "Adding embedded Rust targets..."
+rustup target add riscv32imac-unknown-none-elf  # esp32c6
+rustup target add riscv32imc-unknown-none-elf   # esp32-c2/c3
+
+## ── cargo-binstall (pre-built binary installer — no source compilation) ───────
+log "Installing cargo-binstall..."
+if ! command -v cargo-binstall >/dev/null 2>&1; then
+    curl -L --proto '=https' --tlsv1.2 -sSf \
+        https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh \
+        | bash
+fi
+
+## ── Cargo tools via binstall (downloads pre-built binaries, not source) ──────
+log "Installing cargo tools..."
+cargo-binstall -y \
+    cargo-expand \
+    cargo-edit \
+    cargo-watch \
+    flip-link \
+    espflash \
+    espup
+
+## ── ESP32 Xtensa toolchain (ESP32 / S2 / S3) ─────────────────────────────────
+log "Installing ESP32 Xtensa toolchain (this downloads ~400 MB)..."
 espup install
-$HOME/export-esp.sh
-rustup override set esp
-cargo build-esp32
-cargo build-esp32s2
-cargo build-esp32s3
 
+## ── Shell profile configuration ───────────────────────────────────────────────
+log "Configuring shell profiles..."
+ensure_in_profile '. "$HOME/.cargo/env"' "$HOME/.bashrc"
+ensure_in_profile '. "$HOME/.cargo/env"' "$HOME/.profile"
+if [ -f "$HOME/export-esp.sh" ]; then
+    ensure_in_profile '. "$HOME/export-esp.sh"' "$HOME/.bashrc"
+    ensure_in_profile '. "$HOME/export-esp.sh"' "$HOME/.profile"
+else
+    log "WARNING: ~/export-esp.sh not found after espup install"
+fi
 
-## setup and install oh-my-zsh: Why not, lets leave this here
-sh -c "$(curl -fsSL https://raw.githubusercontent.com/robbyrussell/oh-my-zsh/master/tools/install.sh)"
-cp -R /root/.oh-my-zsh /home/$USERNAME
-cp /root/.zshrc /home/$USERNAME
-sed -i -e "s/\/root\/.oh-my-zsh/\/home\/$USERNAME\/.oh-my-zsh/g" /home/$USERNAME/.zshrc
-chown -R $USER_UID:$USER_GID /home/$USERNAME/.oh-my-zsh /home/$USERNAME/.zshrc
+## ── oh-my-zsh ─────────────────────────────────────────────────────────────────
+log "Installing oh-my-zsh..."
+if [ ! -d "$HOME/.oh-my-zsh" ]; then
+    git clone --depth=1 https://github.com/ohmyzsh/ohmyzsh.git "$HOME/.oh-my-zsh"
+    cp "$HOME/.oh-my-zsh/templates/zshrc.zsh-template" "$HOME/.zshrc"
+fi
+ensure_in_profile '. "$HOME/.cargo/env"' "$HOME/.zshrc"
+if [ -f "$HOME/export-esp.sh" ]; then
+    ensure_in_profile '. "$HOME/export-esp.sh"' "$HOME/.zshrc"
+fi
+
+log "Setup complete!"
+

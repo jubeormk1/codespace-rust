@@ -1,23 +1,32 @@
 {
 	"name": "Codespaces Rust Starter",
-	"extensions": [
-		"cschleiden.vscode-github-actions",
-		"GitHub.copilot-chat",
-		"ms-vsliveshare.vsliveshare",
-		"matklad.rust-analyzer",
-		"vadimcn.vscode-lldb",
-		"tamasfe.even-better-toml",
-		"fill-labs.dependi",
-		"ms-vscode.hexeditor",
-		"Gruntfuggly.todo-tree",
-	],
-	"dockerFile": "Dockerfile",
-	"settings": {
-		"editor.formatOnSave": true,
-		"terminal.integrated.shell.linux": "/usr/bin/zsh",
-		"files.exclude": {
-			"**/CODE_OF_CONDUCT.md": true,
-			"**/LICENSE": true
+	"build": {
+		"dockerfile": "Dockerfile"
+	},
+	"remoteUser": "vscode",
+	"postCreateCommand": "bash .devcontainer/setup.sh",
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"cschleiden.vscode-github-actions",
+				"GitHub.copilot-chat",
+				"ms-vsliveshare.vsliveshare",
+				"rust-lang.rust-analyzer",
+				"vadimcn.vscode-lldb",
+				"probe-rs.probe-rs-debugger",
+				"tamasfe.even-better-toml",
+				"fill-labs.dependi",
+				"ms-vscode.hexeditor",
+				"Gruntfuggly.todo-tree"
+			],
+			"settings": {
+				"editor.formatOnSave": true,
+				"terminal.integrated.defaultProfile.linux": "zsh",
+				"files.exclude": {
+					"**/CODE_OF_CONDUCT.md": true,
+					"**/LICENSE": true
+				}
+			}
 		}
 	}
 }
